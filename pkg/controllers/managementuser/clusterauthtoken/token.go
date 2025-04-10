@@ -176,6 +176,10 @@ func (h *tokenHandler) Updated(token *managementv3.Token) (runtime.Object, error
 	}
 
 	// if the token is hashed, compare its value to make sure the downstream has the latest hash
+	//
+	// BEWARE! for an unhashed token a comparison here is bogus. the downstream hash was
+	// made on creation and any hash we make here for compare with will be different from
+	// it due to the random salt!
 	if token.Annotations[tokens.TokenHashed] == "true" {
 		hashVersion, err := hashers.GetHashVersion(token.Token)
 		if err != nil {
