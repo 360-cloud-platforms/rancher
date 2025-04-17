@@ -88,8 +88,15 @@ func (h *tokenHandler) createClusterAuthToken(token *managementv3.Token, hashedV
 	clusterAuthSecret := common.NewClusterAuthTokenSecret(token, hashedValue)
 
 	// Create the shadow token, and associated secret. Tear both down in case of trouble.
-	_, err = h.clusterAuthToken.Create(clusterAuthToken)
+	clusterAuthToken, err = h.clusterAuthToken.Create(clusterAuthToken)
 	if err == nil {
+		clusterAuthSecret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{{
+			Name:       clusterAuthToken.Name,
+			UID:        clusterAuthToken.UID,
+			APIVersion: clusterAuthToken.APIVersion,
+			Kind:       clusterAuthToken.Kind,
+		}}
+
 		_, err = h.clusterSecret.Create(clusterAuthSecret)
 		if err == nil {
 			return nil
