@@ -49,7 +49,7 @@ func NewClusterAuthTokenSecret(token *managementv3.Token, hashedValue string) *c
 
 // ClusterAuthTokenSecretName builds the name for the cluster auth token's secret.
 func ClusterAuthTokenSecretName(tokenName string) string {
-	return "cat-" + tokenName
+	return tokenName
 }
 
 // ClusterAuthSecretValue extracts the token hash stored in the secret.
