@@ -12,11 +12,10 @@ import (
 )
 
 // NewClusterAuthToken creates a new cluster auth token from a given token.
-// The hashed value is managed separately.
 // Does not create the token in the remote cluster.
-func NewClusterAuthToken(token *managementv3.Token) (*clusterv3.ClusterAuthToken, error) {
+func NewClusterAuthToken(token *managementv3.Token) *clusterv3.ClusterAuthToken {
 	tokenEnabled := token.Enabled == nil || *token.Enabled
-	result := &clusterv3.ClusterAuthToken{
+	return &clusterv3.ClusterAuthToken{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: token.ObjectMeta.Name,
 		},
@@ -27,35 +26,34 @@ func NewClusterAuthToken(token *managementv3.Token) (*clusterv3.ClusterAuthToken
 		ExpiresAt: token.ExpiresAt,
 		Enabled:   tokenEnabled,
 	}
-	return result, nil
 }
 
 // NewClusterAuthSecret creates a new secret from the given token and its hash value
 // The cluster auth token is managed separately.
 // Does not create the secret in the remote cluster.
-func NewClusterAuthSecret(token *managementv3.Token, hashedValue string) (*corev1.Secret, error) {
-	result := &corev1.Secret{
+func NewClusterAuthTokenSecret(token *managementv3.Token, hashedValue string) *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ClusterAuthSecretName(token.ObjectMeta.Name),
+			Name: ClusterAuthTokenSecretName(token.ObjectMeta.Name),
 		},
 		TypeMeta: metav1.TypeMeta{
-			Kind: "Secret",
+			APIVersion: corev1.SchemeGroupVersion.Version,
+			Kind:       "Secret",
 		},
+		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			"hash": []byte(hashedValue),
 		},
 	}
-	return result, nil
 }
 
-// ClusterAuthSecretName computes the name of the cluster auth secret for a
-// token T from the name of T.
-func ClusterAuthSecretName(tokenName string) string {
+// ClusterAuthTokenSecretName builds the name for the cluster auth token's secret.
+func ClusterAuthTokenSecretName(tokenName string) string {
 	return "cat-" + tokenName
 }
 
 // ClusterAuthSecretValue extracts the token hash stored in the secret.
-func ClusterAuthSecretValue(clusterAuthSecret *corev1.Secret) string {
+func ClusterAuthTokenSecretValue(clusterAuthSecret *corev1.Secret) string {
 	return string(clusterAuthSecret.Data["hash"])
 }
 
@@ -77,7 +75,7 @@ func VerifyClusterAuthToken(secretKey string, clusterAuthToken *clusterv3.Cluste
 		}
 	}
 
-	hashedValue := ClusterAuthSecretValue(clusterAuthSecret)
+	hashedValue := ClusterAuthTokenSecretValue(clusterAuthSecret)
 	hasher, err := hashers.GetHasherForHash(hashedValue)
 	if err != nil {
 		return fmt.Errorf("unable to get hasher for clusterAuthToken %s/%s, err: %w", clusterAuthToken.Name, clusterAuthToken.Namespace, err)

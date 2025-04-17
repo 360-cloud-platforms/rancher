@@ -35,9 +35,7 @@ type ClusterAuthToken struct {
 	UserName   string       `json:"userName"`
 	LastUsedAt *metav1.Time `json:"lastUsedAt,omitempty"`
 	ExpiresAt  string       `json:"expiresAt,omitempty"`
-
-	// SecretKeyHash is deprecated. Its function is taken over by a kube
-	// Secret which can be configured to encrypt the value at rest.
+	// Deprecated: The token's secret key hash is now stored in the corresponding v1.Secret.
 	SecretKeyHash string `json:"hash"`
 	Enabled       bool   `json:"enabled"`
 }

@@ -25,10 +25,8 @@ func TestValidUser(t *testing.T) {
 	hasher := hashers.GetHasher()
 	hashedValue, err := hasher.CreateHash(token.Token)
 	assert.NoError(t, err, "got an error but did not expect one")
-	clusterAuthToken, err := NewClusterAuthToken(&token)
-	assert.Nil(t, err)
-	clusterAuthSecret, err := NewClusterAuthSecret(&token, hashedValue)
-	assert.Nil(t, err)
+	clusterAuthToken := NewClusterAuthToken(&token)
+	clusterAuthSecret := NewClusterAuthTokenSecret(&token, hashedValue)
 	assert.Nil(t, VerifyClusterAuthToken(token.Token, clusterAuthToken,
 		clusterAuthSecret))
 }
@@ -38,8 +36,8 @@ func TestInvalidPassword(t *testing.T) {
 	hasher := hashers.GetHasher()
 	hashedValue, err := hasher.CreateHash(token.Token)
 	assert.NoError(t, err, "got an error but did not expect one")
-	clusterAuthToken, _ := NewClusterAuthToken(&token)
-	clusterAuthSecret, _ := NewClusterAuthSecret(&token, hashedValue)
+	clusterAuthToken := NewClusterAuthToken(&token)
+	clusterAuthSecret := NewClusterAuthTokenSecret(&token, hashedValue)
 	assert.NotNil(t, VerifyClusterAuthToken(token.Token+":wrong!",
 		clusterAuthToken, clusterAuthSecret))
 }
@@ -50,8 +48,8 @@ func TestExpired(t *testing.T) {
 	hashedValue, err := hasher.CreateHash(token.Token)
 	assert.NoError(t, err, "got an error but did not expect one")
 	token.ExpiresAt = time.Now().Add(-time.Minute).Format(time.RFC3339)
-	clusterAuthToken, _ := NewClusterAuthToken(&token)
-	clusterAuthSecret, _ := NewClusterAuthSecret(&token, hashedValue)
+	clusterAuthToken := NewClusterAuthToken(&token)
+	clusterAuthSecret := NewClusterAuthTokenSecret(&token, hashedValue)
 	assert.NotNil(t, VerifyClusterAuthToken(token.Token, clusterAuthToken, clusterAuthSecret))
 }
 
@@ -61,8 +59,8 @@ func TestNotExpired(t *testing.T) {
 	hashedValue, err := hasher.CreateHash(token.Token)
 	assert.NoError(t, err, "got an error but did not expect one")
 	token.ExpiresAt = time.Now().Add(time.Minute).Format(time.RFC3339)
-	clusterAuthToken, _ := NewClusterAuthToken(&token)
-	clusterAuthSecret, _ := NewClusterAuthSecret(&token, hashedValue)
+	clusterAuthToken := NewClusterAuthToken(&token)
+	clusterAuthSecret := NewClusterAuthTokenSecret(&token, hashedValue)
 	assert.Nil(t, VerifyClusterAuthToken(token.Token, clusterAuthToken, clusterAuthSecret))
 }
 
@@ -72,7 +70,7 @@ func TestInvalidExpiresAt(t *testing.T) {
 	hashedValue, err := hasher.CreateHash(token.Token)
 	assert.NoError(t, err, "got an error but did not expect one")
 	token.ExpiresAt = "some invalid time stamp"
-	clusterAuthToken, _ := NewClusterAuthToken(&token)
-	clusterAuthSecret, _ := NewClusterAuthSecret(&token, hashedValue)
+	clusterAuthToken := NewClusterAuthToken(&token)
+	clusterAuthSecret := NewClusterAuthTokenSecret(&token, hashedValue)
 	assert.NotNil(t, VerifyClusterAuthToken(token.Token, clusterAuthToken, clusterAuthSecret))
 }
