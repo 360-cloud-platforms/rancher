@@ -85,6 +85,8 @@ func (h *tokenHandler) createClusterAuthToken(token *managementv3.Token, hashedV
 	}
 
 	clusterAuthToken := common.NewClusterAuthToken(token)
+	clusterAuthToken.SecretKeyHash = hashedValue
+
 	clusterAuthSecret := common.NewClusterAuthTokenSecret(token, hashedValue)
 
 	// Create the shadow token, and associated secret. Tear both down in case of trouble.
@@ -144,6 +146,7 @@ func (h *tokenHandler) Updated(token *managementv3.Token) (runtime.Object, error
 				return nil, fmt.Errorf("unable to hash value for token [%s]: %w", token.Name, err)
 			}
 			hashedValue = hashed
+			clusterAuthToken.SecretKeyHash = hashedValue
 		}
 
 		clusterAuthSecret = common.NewClusterAuthTokenSecret(token, hashedValue)
@@ -201,10 +204,10 @@ func (h *tokenHandler) Updated(token *managementv3.Token) (runtime.Object, error
 			_, err = h.clusterSecret.Create(clusterAuthSecret)
 		}
 	}
+
 	clusterAuthToken.UserName = token.UserID
 	clusterAuthToken.Enabled = tokenEnabled
 	clusterAuthToken.ExpiresAt = token.ExpiresAt
-	clusterAuthToken.SecretKeyHash = ""
 
 	_, err = h.clusterAuthToken.Update(clusterAuthToken)
 	if errors.IsNotFound(err) {
