@@ -75,7 +75,10 @@ func VerifyClusterAuthToken(secretKey string, clusterAuthToken *clusterv3.Cluste
 		}
 	}
 
-	hashedValue := ClusterAuthTokenSecretValue(clusterAuthSecret)
+	hashedValue := clusterAuthToken.SecretKeyHash
+	if clusterAuthSecret != nil {
+		hashedValue = ClusterAuthTokenSecretValue(clusterAuthSecret)
+	}
 	hasher, err := hashers.GetHasherForHash(hashedValue)
 	if err != nil {
 		return fmt.Errorf("unable to get hasher for clusterAuthToken %s/%s, err: %w", clusterAuthToken.Name, clusterAuthToken.Namespace, err)
