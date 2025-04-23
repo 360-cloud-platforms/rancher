@@ -193,6 +193,14 @@ func (h *tokenHandler) Updated(token *managementv3.Token) (runtime.Object, error
 		return nil, nil
 	}
 
+	// If we were comparing token values, then the token was hashed, so we can update the value in the downstream.
+	if current.value != "" {
+		clusterAuthSecret.Data["hash"] = []byte(current.value)
+		_, err = h.clusterSecret.Update(clusterAuthSecret)
+		if errors.IsNotFound(err) {
+			_, err = h.clusterSecret.Create(clusterAuthSecret)
+		}
+	}
 	clusterAuthToken.UserName = token.UserID
 	clusterAuthToken.Enabled = tokenEnabled
 	clusterAuthToken.ExpiresAt = token.ExpiresAt
@@ -203,14 +211,6 @@ func (h *tokenHandler) Updated(token *managementv3.Token) (runtime.Object, error
 		_, err = h.clusterAuthToken.Create(clusterAuthToken)
 	}
 
-	// If we were comparing token values, then the token was hashed, so we can update the value in the downstream.
-	if current.value != "" {
-		clusterAuthSecret.Data["hash"] = []byte(current.value)
-		_, err = h.clusterSecret.Update(clusterAuthSecret)
-		if errors.IsNotFound(err) {
-			_, err = h.clusterSecret.Create(clusterAuthSecret)
-		}
-	}
 	return nil, err
 }
 
