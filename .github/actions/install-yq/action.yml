@@ -13,9 +13,24 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: install yq
+    - name: Install yq
       shell: bash
       run: |
-        curl -fsL https://github.com/mikefarah/yq/releases/download/${{ inputs.version }}/yq_linux_${{ inputs.arch }}.tar.gz | tar xz
-        ${{ inputs.use-sudo ==  'true' && 'sudo' || '' }} mv yq_linux_${{ inputs.arch }} /usr/bin/yq
-
+        set -e
+        YQ_VERSION=${{ inputs.version }}
+        ARCH=${{ inputs.arch }}
+        if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
+          echo "Unsupported architecture: $ARCH"
+          exit 1
+        fi
+        curl -fsL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}.tar.gz -o /tmp/yq.tar.gz
+        tar -xzf /tmp/yq.tar.gz -C /tmp
+        ls -l /tmp  # Debug: List extracted files
+        if [[ ! -f /tmp/yq_linux_${ARCH} ]]; then
+          echo "Error: yq_linux_${ARCH} not found after extraction"
+          exit 1
+        fi
+        chmod +x /tmp/yq_linux_${ARCH}
+        file /tmp/yq_linux_${ARCH}  # Debug: Check binary type
+        ${{ inputs.use-sudo == 'true' && 'sudo' || '' }} mv /tmp/yq_linux_${ARCH} /usr/bin/yq
+        yq --version  # Debug: Verify yq installation
