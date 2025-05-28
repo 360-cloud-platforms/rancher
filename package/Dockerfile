@@ -1,4 +1,46 @@
-FROM kalexiwells/rancher-images:v2.10.3 AS base
+FROM registry.suse.com/bci/bci-micro:15.6 AS final
+
+# Temporary build stage image
+FROM registry.suse.com/bci/bci-base:15.6 AS builder
+
+# Install system packages using builder image that has zypper
+COPY --from=final / /chroot/
+
+# Install some packages with zypper in the chroot of the final micro image
+RUN zypper refresh && \
+    zypper --installroot /chroot -n in --no-recommends \
+    git-core curl util-linux ca-certificates ca-certificates-mozilla unzip xz gzip sed tar shadow gawk vim-small \
+    netcat-openbsd mkisofs openssh-clients openssl patterns-base-fips && \
+    zypper --installroot /chroot clean -a && \
+    rm -rf /chroot/var/cache/zypp/* /chroot/var/log/zypp/* /chroot/tmp/* /chroot/var/tmp/* /chroot/usr/share/doc/packages/*
+
+# Main stage using bci-micro as the base image
+FROM final AS base
+
+# Copy binaries and configuration files from builder to micro
+COPY --from=builder /chroot/ /
+
+# Test that some of the dependency binaries were copied
+# and are working on the target image.
+RUN /usr/bin/unshare --version && \
+    /usr/bin/mount --version && \
+    /usr/bin/umount --version && \
+    /usr/bin/nsenter --version
+
+RUN useradd rancher && \
+    groupadd jail-accessors && \
+    usermod -aG jail-accessors rancher && \
+    mkdir -p /var/lib/rancher /var/lib/cattle /opt/jail /opt/drivers/management-state/bin && \
+    chgrp jail-accessors /var/lib/rancher /var/lib/cattle /usr/local/bin && \
+    chmod 750            /var/lib/rancher /var/lib/cattle /usr/local/bin && \
+    chmod g+s            /var/lib/rancher /var/lib/cattle /usr/local/bin
+
+RUN mkdir /root/.kube && \
+    ln -s /etc/rancher/k3s/k3s.yaml /root/.kube/k3s.yaml  && \
+    ln -s /etc/rancher/k3s/k3s.yaml /root/.kube/config && \
+    ln -s /usr/bin/rancher /usr/bin/reset-password && \
+    ln -s /usr/bin/rancher /usr/bin/ensure-default-admin
+WORKDIR /var/lib/rancher
 
 ARG ARCH=amd64
 ARG ETCD_UNSUPPORTED_ARCH
@@ -213,7 +255,7 @@ RUN mkdir -p /usr/share/rancher/ui && \
     curl -sfL ${CATTLE_SYSTEM_AGENT_UNINSTALL_SCRIPT} -o system-agent-uninstall.sh && \
     curl -sfL https://github.com/rancher/wins/releases/download/${CATTLE_WINS_AGENT_VERSION}/wins.exe -O && \
     curl -sfL https://acs-mirror.azureedge.net/csi-proxy/${CATTLE_CSI_PROXY_AGENT_VERSION}/binaries/csi-proxy-${CATTLE_CSI_PROXY_AGENT_VERSION}.tar.gz -O && \
-    curl -sfL ${CATTLE_WINS_AGENT_INSTALL_SCRIPT} -o wins-agent-install.ps1 && \
+    curl -sfL ${CATTLE_WINS_AGENT_INSTALL_SCRIPT} -o wins-agent-install.ps1 \
     curl -sfL ${CATTLE_WINS_AGENT_UNINSTALL_SCRIPT} -o wins-agent-uninstall.ps1
 
 ENV CATTLE_CLI_URL_DARWIN  https://releases.rancher.com/cli2/${CATTLE_CLI_VERSION}/rancher-darwin-amd64-${CATTLE_CLI_VERSION}.tar.gz
