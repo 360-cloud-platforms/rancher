@@ -1,5 +1,5 @@
 name: "Install yq"
-description: "Install yq from source"
+description: "Install yq using a Docker container"
 inputs:
   version:
     description: "yq version"
@@ -8,29 +8,23 @@ inputs:
     description: "host arch"
     required: true
   use-sudo:
-    description: "use sudo to move the yq binary"
+    description: "use sudo to install yq"
     default: false
 runs:
   using: "composite"
   steps:
-    - name: Install yq
+    - name: Install yq via Docker
       shell: bash
       run: |
         set -e
-        YQ_VERSION=${{ inputs.version }}
         ARCH=${{ inputs.arch }}
         if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
           echo "Unsupported architecture: $ARCH"
           exit 1
         fi
-        curl -fsL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}.tar.gz -o /tmp/yq.tar.gz
-        tar -xzf /tmp/yq.tar.gz -C /tmp
-        ls -l /tmp  # Debug: List extracted files
-        if [[ ! -f /tmp/yq_linux_${ARCH} ]]; then
-          echo "Error: yq_linux_${ARCH} not found after extraction"
-          exit 1
-        fi
-        chmod +x /tmp/yq_linux_${ARCH}
-        file /tmp/yq_linux_${ARCH}  # Debug: Check binary type
-        ${{ inputs.use-sudo == 'true' && 'sudo' || '' }} mv /tmp/yq_linux_${ARCH} /usr/bin/yq
-        yq --version  # Debug: Verify yq installation
+        # Create a wrapper script to run yq in a Docker container
+        echo '#!/bin/bash' > /usr/bin/yq
+        echo 'docker run --rm -v $(pwd):/workdir mikefarah/yq:${{ inputs.version }} "$@"' >> /usr/bin/yq
+        chmod +x /usr/bin/yq
+        ${{ inputs.use-sudo == 'true' && 'sudo' || '' }} mv /usr/bin/yq /usr/bin/yq
+        yq --version
