@@ -105,7 +105,7 @@ jobs:
     strategy:
       matrix:
         os: [linux]
-        arch: [x64, arm64]
+        arch: [x64] # Restrict to amd64 due to base image limitation
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -213,7 +213,7 @@ jobs:
     strategy:
       matrix:
         os: [linux]
-        arch: [x64, arm64]
+        arch: [x64, arm64] # Keep arm64 for server images
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -257,6 +257,7 @@ jobs:
           docker tag "$image_id" ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
       - name: Push agent image
+        if: matrix.arch == 'x64' # Only push agent for amd64
         run: |
           image_agent_id=$(docker load --input /tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar 2>&1 | grep "Loaded image" | awk '{print $NF}')
           if [ -z "$image_agent_id" ]; then
@@ -326,19 +327,15 @@ jobs:
         run: |
           docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent \
             ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2019 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2022
+            ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2022 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
           docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent \
-            --append ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64 \
-            --append ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-arm64
           if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "v2.10.3-branch" ]]; then
             docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.HEAD_TAG }}-agent \
               ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2019 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2022
+              ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-windows-2022 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
             docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.HEAD_TAG }}-agent
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.HEAD_TAG }}-agent \
-              --append ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64 \
-              --append ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-arm64
           fi
       - name: Inspect image
         run: |
@@ -348,7 +345,7 @@ jobs:
     strategy:
       matrix:
         os: [linux]
-        arch: [x64, arm64]
+        arch: [x64] # Restrict to amd64 due to base image limitation
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -364,6 +361,10 @@ jobs:
           fi
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Download chart
+        run: |
+          mkdir -p chart
+          curl -sLf https://releases.rancher.com/server-charts/stable/rancher-2.10.3.tgz -o chart/rancher-2.10.3.tgz
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
       - name: Docker meta
@@ -394,9 +395,8 @@ jobs:
           push: true
           build-args: |
             "VERSION=${{ env.TAG }}"
-            "ARCH=${{ matrix.arch }}"
-            "RANCHER_TAG=${{ env.TAG }}"
-            "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
+            "ARCH=${{ env.ARCH }}"
+            "BUILDARCH=${{ env.ARCH }}"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
@@ -434,9 +434,9 @@ jobs:
             latest=false
       - name: Create manifest list and push
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-arm64
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
           if [[ "${{ github.ref_name }}" == release/v* ]]; then
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.HEAD_TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-arm64
+            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.HEAD_TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
           fi
       - name: Inspect image
         run: |
