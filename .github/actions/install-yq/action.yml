@@ -1,5 +1,5 @@
 name: "Install yq"
-description: "Install yq using a Docker container"
+description: "Install yq using snap"
 inputs:
   version:
     description: "yq version"
@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install yq via Docker
+    - name: Install yq via snap
       shell: bash
       run: |
         set -e
@@ -22,9 +22,12 @@ runs:
           echo "Unsupported architecture: $ARCH"
           exit 1
         fi
-        # Create a wrapper script to run yq in a Docker container
-        echo '#!/bin/bash' > /usr/bin/yq
-        echo 'docker run --rm -v $(pwd):/workdir mikefarah/yq:${{ inputs.version }} "$@"' >> /usr/bin/yq
-        chmod +x /usr/bin/yq
-        ${{ inputs.use-sudo == 'true' && 'sudo' || '' }} mv /usr/bin/yq /usr/bin/yq
-        yq --version
+        ${{ inputs.use-sudo == 'true' && 'sudo' || '' }} snap install yq
+        # Ensure snap bin directory is in PATH
+        export PATH=$PATH:/snap/bin
+        echo "PATH=$PATH:/snap/bin" >> $GITHUB_ENV
+        # Verify yq is accessible
+        which yq || { echo "yq not found in PATH"; exit 1; }
+        # Check permissions
+        ls -l $(which yq)
+        yq --version || { echo "Failed to run yq --version"; exit 1; }
