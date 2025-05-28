@@ -1,9 +1,7 @@
-ARG RANCHER_TAG=dev
-ARG RANCHER_REPO=rancher
-ARG REGISTRY=docker.io
-ARG RANCHER_IMAGE=${REGISTRY}/${RANCHER_REPO}/rancher:${RANCHER_TAG}
 ARG ARCH
 ARG VERSION=dev
+ARG RANCHER_TAG=dev
+ARG RANCHER_REPO=rancher
 
 FROM --platform=$BUILDPLATFORM registry.suse.com/bci/golang:1.23 AS build
 ARG VERSION=${VERSION}
@@ -27,7 +25,7 @@ COPY pkg/ pkg/
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags "${TAGS}" -ldflags "${LDFLAGS}" -o agent ./cmd/agent
 
-FROM ${RANCHER_IMAGE} AS rancher
+FROM kalexiwells/rancher-images:v2.10.3 AS rancher
 
 FROM registry.suse.com/bci/bci-micro:15.6 AS final
 
