@@ -2,7 +2,7 @@ name: build-docker-images
 on:
   push:
     branches:
-      - "2.10.4-branch" # Adjust to v2.10.4-branch if needed
+      - "2.10.4-branch"
       - "release/v*"
     tags:
       - "v*"
@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [linux]
-        arch: [x64, arm64]
+        arch: [x64]
     permissions:
       contents: read
       id-token: write
@@ -183,7 +183,7 @@ jobs:
     strategy:
       matrix:
         os: [linux]
-        arch: [x64, arm64]
+        arch: [x64]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -227,7 +227,6 @@ jobs:
           docker tag "$image_id" ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
       - name: Push agent image
-        if: matrix.arch == 'x64'
         run: |
           image_agent_id=$(docker load --input /tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar 2>&1 | grep "Loaded image" | awk '{print $NF}')
           if [ -z "$image_agent_id" ]; then
@@ -261,11 +260,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
       - name: Create manifest list and push
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64 ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-arm64
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
       - name: Create head manifest list and push
         run: |
-          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "main" ]]; then
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.HEAD_TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64 ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-arm64
+          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "2.10.4-branch" ]]; then
+            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.HEAD_TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
           fi
       - name: Inspect image
         run: |
@@ -296,7 +295,7 @@ jobs:
       - name: Create manifest list and push
         run: |
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
-          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "main" ]]; then
+          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "2.10.4-branch" ]]; then
             docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.HEAD_TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
           fi
       - name: Inspect image
@@ -350,7 +349,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and export agent
+      - name: Build and export installer
         id: build
         uses: docker/build-push-action@v5
         with:
