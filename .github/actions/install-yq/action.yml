@@ -1,5 +1,5 @@
 name: "Install yq"
-description: "Install yq from source"
+description: "Install yq using a direct download"
 inputs:
   version:
     description: "yq version"
@@ -7,15 +7,23 @@ inputs:
   arch:
     description: "host arch"
     required: true
-  use-sudo:
-    description: "use sudo to move the yq binary"
-    default: false
 runs:
   using: "composite"
   steps:
-    - name: install yq
+    - name: Install yq
       shell: bash
       run: |
-        curl -fsL https://github.com/mikefarah/yq/releases/download/${{ inputs.version }}/yq_linux_${{ inputs.arch }}.tar.gz | tar xz
-        ${{ inputs.use-sudo ==  'true' && 'sudo' || '' }} mv yq_linux_${{ inputs.arch }} /usr/bin/yq
-
+        set -e
+        ARCH=${{ inputs.arch }}
+        if [[ "$ARCH" == "x64" ]]; then
+          YQ_ARCH="amd64"
+        elif [[ "$ARCH" == "arm64" ]]; then
+          YQ_ARCH="arm64"
+        else
+          echo "Unsupported architecture: $ARCH"
+          exit 1
+        fi
+        YQ_VERSION=${{ inputs.version }}
+        wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}" -O /usr/bin/yq
+        chmod +x /usr/bin/yq
+        yq --version || { echo "Failed to run yq --version"; exit 1; }
