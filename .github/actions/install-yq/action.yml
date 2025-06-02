@@ -24,6 +24,7 @@ runs:
           exit 1
         fi
         YQ_VERSION=${{ inputs.version }}
-        wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}" -O /usr/bin/yq
-        chmod +x /usr/bin/yq
-        yq --version || { echo "Failed to run yq --version"; exit 1; }
+        wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}" -O /tmp/yq
+        chmod +x /tmp/yq
+        echo "/tmp" >> $GITHUB_PATH
+        /tmp/yq --version || { echo "Failed to run yq --version"; exit 1; }
