@@ -14,6 +14,7 @@ env:
   IMAGE_INSTALLER: kalexiwells/rancher-images
   REGISTRY: "docker.io"
   DOCKERIO_REGISTRY: "docker.io"
+  TAG: 2.10.4  # Set explicit tag for 2.10.4-branch
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -85,7 +86,7 @@ jobs:
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
             "CATTLE_CSP_ADAPTER_MIN_VERSION=${{ steps.env.outputs.CATTLE_CSP_ADAPTER_MIN_VERSION }}"
             "CATTLE_FLEET_VERSION=${{ steps.env.outputs.CATTLE_FLEET_VERSION }}"
-          tags: ${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
           file: ./package/Dockerfile
@@ -137,7 +138,7 @@ jobs:
       - id: env
         name: Setup Dependencies Env Variables
         uses: ./.github/actions/setup-build-env
-      - name: Setup TAG Variables
+      - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
       - name: Docker meta
         id: meta
@@ -162,7 +163,7 @@ jobs:
             "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
             "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
-          tags: ${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
           file: ./package/Dockerfile.agent
