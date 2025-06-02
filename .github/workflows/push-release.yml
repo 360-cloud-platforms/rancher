@@ -39,7 +39,6 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-          use-sudo: true
       - name: Set Docker Credentials
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
@@ -125,7 +124,6 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-          use-sudo: true
       - name: Set Docker Credentials
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
