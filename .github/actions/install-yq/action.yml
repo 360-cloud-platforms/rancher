@@ -15,7 +15,7 @@ runs:
       run: |
         set -e
         ARCH=${{ inputs.arch }}
-        if [[ "$ARCH" == "x64" ]]; then
+        if [[ "$ARCH" == "x64" || "$ARCH" == "amd64" ]]; then
           YQ_ARCH="amd64"
         elif [[ "$ARCH" == "arm64" ]]; then
           YQ_ARCH="arm64"
