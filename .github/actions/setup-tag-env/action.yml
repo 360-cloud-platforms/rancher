@@ -9,12 +9,15 @@ runs:
         TAG="${{ github.sha }}"
         prefix="release/"
         if [[ "$ref_name" == "main" ]]; then
-          TAG=v2.10-${{ github.sha }}-head 
+          TAG=v2.10-${{ github.sha }}-head
           echo "HEAD_TAG=head" >> "$GITHUB_ENV"
         elif [[ "$ref_name" == release/v* ]]; then
           TAG=${ref_name#$prefix}-${{ github.sha }}-head
           HEAD_TAG=${ref_name#$prefix}-head
           echo "HEAD_TAG=$HEAD_TAG" >> "$GITHUB_ENV"
+        elif [[ "$ref_name" == "2.10.4-branch" ]]; then
+          TAG=2.10.4
+          echo "HEAD_TAG=2.10.4" >> "$GITHUB_ENV"
         fi
         if [[ "${{ github.ref }}" == refs/tags/* ]]; then
           TAG="$ref_name"
