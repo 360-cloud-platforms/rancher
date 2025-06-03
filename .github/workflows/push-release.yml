@@ -14,7 +14,7 @@ env:
   IMAGE_INSTALLER: kalexiwells/rancher-images
   REGISTRY: "docker.io"
   DOCKERIO_REGISTRY: "docker.io"
-  TAG: 2.10.4  # Set explicit tag for 2.10.4-branch
+  TAG: 2.10.4
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -50,8 +50,6 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
           registry: ${{ env.REGISTRY }}
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
       - id: env
         name: Setup Dependencies Env Variables
         uses: ./.github/actions/setup-build-env
@@ -138,8 +136,6 @@ jobs:
       - id: env
         name: Setup Dependencies Env Variables
         uses: ./.github/actions/setup-build-env
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -204,8 +200,6 @@ jobs:
           pattern: "*-${{ matrix.os }}-${{ env.ARCH }}"
           path: /tmp
           merge-multiple: true
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
       - name: Set Docker Credentials
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
@@ -243,8 +237,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Set Docker Credentials
@@ -260,11 +252,6 @@ jobs:
       - name: Create manifest list and push
         run: |
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
-      - name: Create head manifest list and push
-        run: |
-          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "2.10.4-branch" ]]; then
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.HEAD_TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
-          fi
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server
@@ -277,8 +264,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Set Docker Credentials
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
@@ -289,14 +276,9 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
           registry: ${{ env.REGISTRY }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
       - name: Create manifest list and push
         run: |
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
-          if [[ "${{ github.ref_name }}" == release/v* ]] || [[ "${{ github.ref_name }}" == "2.10.4-branch" ]]; then
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.HEAD_TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
-          fi
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent
@@ -325,8 +307,6 @@ jobs:
         run: |
           mkdir -p chart
           curl -sLf https://releases.rancher.com/server-charts/stable/rancher-2.10.4.tgz -o chart/rancher-2.10.4.tgz
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -371,8 +351,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Environment Variables
-        uses: ./.github/actions/setup-tag-env
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Set Docker Credentials
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
@@ -383,8 +363,6 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
           registry: ${{ env.REGISTRY }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -395,9 +373,6 @@ jobs:
       - name: Create manifest list and push
         run: |
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
-          if [[ "${{ github.ref_name }}" == release/v* ]]; then
-            docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.HEAD_TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
-          fi
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer
