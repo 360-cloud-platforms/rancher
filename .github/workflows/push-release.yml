@@ -1,3 +1,4 @@
+
 name: build-docker-images
 on:
   push:
@@ -82,6 +83,7 @@ jobs:
             "COMMIT=${{ env.COMMIT }}"
             "RKE_VERSION=${{ steps.env.outputs.RKE_VERSION }}"
             "ARCH=${{ env.ARCH }}"
+            "REGISTRY=${{ env.REGISTRY }}"
             "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
             "CATTLE_CSP_ADAPTER_MIN_VERSION=${{ steps.env.outputs.CATTLE_CSP_ADAPTER_MIN_VERSION }}"
@@ -144,7 +146,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE }}
+          images: ${{ env.IMAGE_AGENT }}
           flavor: |
             latest=false
       - name: Set up QEMU
@@ -161,14 +163,16 @@ jobs:
             "ARCH=${{ env.ARCH }}"
             "RANCHER_TAG=${{ env.TAG }}"
             "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
+            "REGISTRY=${{ env.REGISTRY }}"
             "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
-          file: ./package/Dockerfile.agent
+          file: ./package/Dockerfile
           labels: "${{ steps.meta.outputs.labels }}"
           outputs: type=docker,dest=/tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar
+          target: "agent"
       - name: Upload image
         uses: actions/upload-artifact@v4
         with:
@@ -323,7 +327,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE }}
+          images: ${{ env.IMAGE_INSTALLER }}
           flavor: |
             latest=false
       - name: Set Docker Credentials
@@ -349,6 +353,7 @@ jobs:
             "VERSION=${{ env.TAG }}"
             "ARCH=${{ env.ARCH }}"
             "BUILDARCH=${{ env.ARCH }}"
+            "REGISTRY=${{ env.REGISTRY }}"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
