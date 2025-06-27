@@ -312,7 +312,8 @@ jobs:
             echo "Error: No Helm chart .tgz file found in ./bin/chart/*/"
             exit 1
           fi
-          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}
+          export HELM_REGISTRY_CONFIG=~/.docker/config.json
+          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }} --debug
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
