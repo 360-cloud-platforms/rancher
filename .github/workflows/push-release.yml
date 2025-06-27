@@ -14,7 +14,7 @@ env:
   IMAGE_INSTALLER: kalexiwells/rancher-images
   REGISTRY: "docker.io"
   DOCKERIO_REGISTRY: "docker.io"
-  TAG: 2.10.6  # Hardcode for 2.10.6
+  TAG: 2.10.6
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -201,10 +201,14 @@ jobs:
           fi
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug artifact pattern
+        shell: bash
+        run: |
+          echo "Artifact pattern: *-linux-amd64"
       - name: Download rancher image
         uses: actions/download-artifact@v4
         with:
-          pattern: *-${{ matrix.os }}-${{ env.ARCH }}
+          pattern: *-linux-amd64
           path: /tmp
           merge-multiple: true
       - name: Setup Environment Variables
@@ -403,7 +407,7 @@ jobs:
         run: |
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
           echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Docker Registry Login
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKER_USERNAME }}
