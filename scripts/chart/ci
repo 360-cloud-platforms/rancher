@@ -1,8 +1,13 @@
 #!/bin/bash
 set -e
-
 cd $(dirname $0)
-
+for script in build validate test package; do
+  if [ ! -f "./$script" ]; then
+    echo "Error: $script script not found"
+    exit 1
+  fi
+done
+export PATH=/tmp:$PATH
 ./build chart
 ./validate
 ./test
