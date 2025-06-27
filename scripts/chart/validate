@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-
 set -ex
-
 echo "-- chart/validate --"
-
-# Check for helm
-if [ -z "$(type -p helm_v3)" ]; then
-    echo "helm_v3 not found. Helm is required to run tests."
+if [ ! -f /tmp/helm_v3 ]; then
+    echo "helm_v3 not found at /tmp/helm_v3. Helm is required to run tests."
     exit 1
 fi
-
-helm_v3 lint $(dirname $0)/../../build/chart/rancher
+chart_dir=$(dirname $0)/../../build/chart/rancher
+if [ ! -d "$chart_dir" ]; then
+    echo "Chart directory $chart_dir not found"
+    exit 1
+fi
+/tmp/helm_v3 lint "$chart_dir"
