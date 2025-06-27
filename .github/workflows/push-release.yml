@@ -313,7 +313,7 @@ jobs:
             exit 1
           fi
           CHART_VERSION=$(basename "$CHART_TGZ" .tgz | sed 's/rancher-//')
-          CLEAN_VERSION=$(echo "$CHART_VERSION" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          CLEAN_VERSION=$(echo "$CHART_VERSION" | tr '.' '-')
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
           echo "CLEAN_VERSION: $CLEAN_VERSION"
