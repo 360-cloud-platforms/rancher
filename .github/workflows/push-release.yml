@@ -313,7 +313,12 @@ jobs:
             exit 1
           fi
           CHART_VERSION=$(basename "$CHART_TGZ" .tgz | sed 's/rancher-//')
-          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:helm-chart-$CHART_VERSION
+          CLEAN_VERSION=$(echo "$CHART_VERSION" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "CHART_TGZ: $CHART_TGZ"
+          echo "CHART_VERSION: $CHART_VERSION"
+          echo "CLEAN_VERSION: $CLEAN_VERSION"
+          echo "Pushing to: oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:helm-chart-$CLEAN_VERSION"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:helm-chart-$CLEAN_VERSION
         env:
           REGISTRY: docker.io
           DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
