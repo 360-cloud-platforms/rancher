@@ -237,6 +237,61 @@ jobs:
           fi
           docker tag "$image_agent_id" ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+  build-publish-chart:
+    needs: [push-images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq awscli
+      - name: Setup Tag Env Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Install yq
+        uses: ./.github/actions/install-yq
+        with:
+          arch: ${{ env.ARCH }}
+      - id: env
+        name: Setup Dependencies Env Variables
+        uses: ./.github/actions/setup-build-env
+      - name: Install Helm dependencies
+        env:
+          HELM_URL: https://get.helm.sh/helm-${{ steps.env.outputs.HELM_VERSION }}-linux-amd64.tar.gz
+          HELM_UNITTEST_VERSION: ${{ steps.env.outputs.HELM_UNITTEST_VERSION }}
+        shell: bash
+        run: |
+          curl ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && \
+          mv /tmp/helm /usr/bin/helm_v3 && \
+          chmod +x /usr/bin/helm_v3
+          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }}
+      - name: Build
+        shell: bash
+        run: ./scripts/chart/build chart
+      - name: Validate
+        shell: bash
+        run: ./scripts/chart/validate
+      - name: Test
+        shell: bash
+        run: ./scripts/chart/test
+      - name: Package
+        shell: bash
+        run: ./scripts/chart/package
+      - name: Upload chart
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: ./bin/chart/*
+          if-no-files-found: error
+          retention-days: 4
+          overwrite: true
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
