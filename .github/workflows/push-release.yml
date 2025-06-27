@@ -2,18 +2,18 @@ name: build-docker-images
 on:
   push:
     branches:
-      - "2.10.6-branch-custom-automation"
-      - "release/v*"
+      - 2.10.6-branch-custom-automation
+      - release/v*
     tags:
-      - "v*"
+      - v*
 env:
   COMMIT: ${{ github.sha }}
   REPOSITORY_OWNER: kalexiwells
   IMAGE: kalexiwells/rancher-images
   IMAGE_AGENT: kalexiwells/rancher-images
   IMAGE_INSTALLER: kalexiwells/rancher-images
-  REGISTRY: "docker.io"
-  DOCKERIO_REGISTRY: "docker.io"
+  REGISTRY: docker.io
+  DOCKERIO_REGISTRY: docker.io
   TAG: 2.10.6
 jobs:
   build-server:
@@ -275,7 +275,7 @@ jobs:
           curl ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && \
           sudo mv /tmp/helm /usr/bin/helm_v3 && \
           sudo chmod +x /usr/bin/helm_v3
-          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }
+          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version "${{ env.HELM_UNITTEST_VERSION }}"
       - name: Build
         shell: bash
         run: ./scripts/chart/build chart
