@@ -268,25 +268,11 @@ jobs:
           HELM_UNITTEST_VERSION: ${{ steps.env.outputs.HELM_UNITTEST_VERSION }}
         shell: bash
         run: |
-          echo "Downloading Helm from $HELM_URL"
           for i in {1..3}; do
-            curl -sLf -o /tmp/helm.tar.gz "$HELM_URL" && break || sleep 5
+            curl -sLf ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && break || sleep 5
           done
-          if [ ! -f /tmp/helm.tar.gz ]; then
-            echo "Error: Failed to download Helm tarball"
-            exit 1
-          fi
-          echo "Verifying Helm tarball checksum"
-          echo "c25e2d9f0b5c12bee28c0557714c8c3f7d07b30c4d0f3cacd91a72c4f5939a876  /tmp/helm.tar.gz" | sha256sum -c -
-          if [ $? -ne 0 ]; then
-            echo "Error: Helm tarball checksum verification failed"
-            exit 1
-          fi
-          tar xvzf /tmp/helm.tar.gz --strip-components=1 -C /tmp/
           mv /tmp/helm /tmp/helm_v3
           chmod +x /tmp/helm_v3
-          echo "Verifying Helm version"
-          /tmp/helm_v3 --version
           for i in {1..3}; do
             /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
           done
@@ -326,10 +312,8 @@ jobs:
             echo "Error: No Helm chart .tgz file found in ./bin/chart/*/"
             exit 1
           fi
-          for i in {1..3}; do
-            /tmp/helm_v3 chart save "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }} && \
-            /tmp/helm_v3 chart push oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-chart && break || sleep 5
-          done
+          /tmp/helm_v3 chart save "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}
+          /tmp/helm_v3 chart push oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-chart
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
