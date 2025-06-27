@@ -28,32 +28,54 @@ runs:
         HELM_UNITTEST_VERSION: ${{ steps.env.outputs.HELM_UNITTEST_VERSION }}
       shell: bash
       run: |
+        echo "Downloading Helm from $HELM_URL"
         for i in {1..3}; do
-          curl -sLf ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && break || sleep 5
+          curl -sLf -o /tmp/helm.tar.gz "$HELM_URL" && break || sleep 5
         done
-        mv /tmp/helm /usr/bin/helm_v3
-        chmod +x /usr/bin/helm_v3
+        if [ ! -f /tmp/helm.tar.gz ]; then
+          echo "Error: Failed to download Helm tarball"
+          exit 1
+        fi
+        echo "Verifying Helm tarball checksum"
+        echo "c25e2d9f0b5c12bee28c0557714c8c3f7d07b30c4d0f3cacd91a72c4f5939a876  /tmp/helm.tar.gz" | sha256sum -c -
+        if [ $? -ne 0 ]; then
+          echo "Error: Helm tarball checksum verification failed"
+          exit 1
+        fi
+        tar xvzf /tmp/helm.tar.gz --strip-components=1 -C /tmp/
+        mv /tmp/helm /tmp/helm_v3
+        chmod +x /tmp/helm_v3
+        echo "Verifying Helm version"
+        /tmp/helm_v3 --version
         for i in {1..3}; do
-          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
+          /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
         done
     - name: Build
       shell: bash
-      run: ./scripts/chart/build chart
+      run: |
+        export PATH=/tmp:$PATH
+        ./scripts/chart/build chart
     - name: Validate
       shell: bash
-      run: ./scripts/chart/validate
+      run: |
+        export PATH=/tmp:$PATH
+        ./scripts/chart/validate
     - name: Test
       shell: bash
-      run: ./scripts/chart/test
+      run: |
+        export PATH=/tmp:$PATH
+        ./scripts/chart/test
     - name: Package
       shell: bash
-      run: ./scripts/chart/package
+      run: |
+        export PATH=/tmp:$PATH
+        ./scripts/chart/package
     - name: Upload chart
       if: inputs.upload-artifact == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: chart
-        path: ./bin/chart/*
+        path: ./bin/chart/*/*
         if-no-files-found: error
         retention-days: 4
         overwrite: true
