@@ -271,10 +271,10 @@ jobs:
           for i in {1..3}; do
             curl -sLf ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && break || sleep 5
           done
-          mv /tmp/helm /usr/bin/helm_v3
-          chmod +x /usr/bin/helm_v3
+          mv /tmp/helm /tmp/helm_v3
+          chmod +x /tmp/helm_v3
           for i in {1..3}; do
-            helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
+            /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
           done
       - name: Set Docker Credentials
         run: |
@@ -282,30 +282,38 @@ jobs:
           echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
       - name: Build
         shell: bash
-        run: ./scripts/chart/build chart
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/build chart
       - name: Validate
         shell: bash
-        run: ./scripts/chart/validate
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/validate
       - name: Test
         shell: bash
-        run: ./scripts/chart/test
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/test
       - name: Package
         shell: bash
-        run: ./scripts/chart/package
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/package
       - name: Login to Docker Hub for Helm
         shell: bash
         run: |
-          echo "${{ env.DOCKER_PASSWORD }}" | helm_v3 registry login ${{ env.REGISTRY }} -u ${{ env.DOCKER_USERNAME }} --password-stdin
+          echo "${{ env.DOCKER_PASSWORD }}" | /tmp/helm_v3 registry login ${{ env.REGISTRY }} -u ${{ env.DOCKER_USERNAME }} --password-stdin
       - name: Push Helm chart to Docker Hub
         shell: bash
         run: |
-          CHART_TGZ=$(ls ./bin/chart/rancher-*.tgz 2>/dev/null)
+          CHART_TGZ=$(ls ./bin/chart/*/rancher-*.tgz 2>/dev/null)
           if [ -z "$CHART_TGZ" ]; then
-            echo "Error: No Helm chart .tgz file found in ./bin/chart/"
+            echo "Error: No Helm chart .tgz file found in ./bin/chart/*/"
             exit 1
           fi
-          helm_v3 chart save "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}
-          helm_v3 chart push oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-chart
+          /tmp/helm_v3 chart save "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}
+          /tmp/helm_v3 chart push oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-chart
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
