@@ -1,5 +1,13 @@
 name: Validate
-on: [pull_request, push]
+on:
+  push:
+    branches:
+      - '**'
+    branches-ignore:
+      - 2.10.6-branch-custom-automation
+  pull_request:
+    branches:
+      - '**'
 jobs:
   validate:
     runs-on: org-${{ github.repository_owner_id }}-amd64-k8s
