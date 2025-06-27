@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-
 set -e
-
 echo "-- chart/package --"
-
 cd $(dirname $0)/..
+if [ ! -f ./version ]; then
+  echo "Error: ./version not found"
+  exit 1
+fi
 . ./version
-
+if [ -z "${CHART_REPO}" ]; then
+  echo "Error: CHART_REPO is not set"
+  exit 1
+fi
+chart_dir=../build/chart/rancher
+if [ ! -d "$chart_dir" ]; then
+  echo "Error: Chart directory $chart_dir not found"
+  exit 1
+fi
 mkdir -p ../bin/chart/${CHART_REPO}
-
-helm_v3 package -d ../bin/chart/${CHART_REPO} ../build/chart/rancher
-
-echo "updating index ... "
-./chart/index ${CHART_REPO}
+if [ ! -f /tmp/helm_v3 ]; then
+  echo "Error: helm_v3 not found at /tmp/helm_v3"
+  exit 1
+fi
+/tmp/helm_v3 package -d ../bin/chart/${CHART_REPO} "$chart_dir"
