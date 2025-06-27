@@ -204,7 +204,7 @@ jobs:
       - name: Download rancher image
         uses: actions/download-artifact@v4
         with:
-          pattern: *-{{ matrix.os }}-{{ env.ARCH }}
+          pattern: *-${{ matrix.os }}-${{ env.ARCH }}
           path: /tmp
           merge-multiple: true
       - name: Setup Environment Variables
@@ -271,7 +271,7 @@ jobs:
           curl ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && \
           sudo mv /tmp/helm /usr/bin/helm_v3 && \
           sudo chmod +x /usr/bin/helm_v3
-          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }}
+          helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }
       - name: Build
         shell: bash
         run: ./scripts/chart/build chart
@@ -294,12 +294,6 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
           registry: ${{ env.REGISTRY }}
-      - name: Debug environment variables
-        shell: bash
-        run: |
-          echo "TAG=${{ env.TAG }}"
-          echo "REGISTRY=${{ env.REGISTRY }}"
-          echo "IMAGE=${{ env.IMAGE }}"
       - name: Push Helm chart to Docker Hub
         shell: bash
         run: |
