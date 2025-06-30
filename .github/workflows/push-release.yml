@@ -245,16 +245,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install dependencies
-        shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq gawk google-cloud-sdk
-      - name: Authenticate with gcloud
-        shell: bash
-        run: |
-          echo "${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" > /tmp/key.json
-          gcloud auth activate-service-account --key-file=/tmp/key.json
-          gcloud auth configure-docker ${{ env.REGISTRY }}
+          sudo apt-get install -y jq gawk
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
       - name: Setup Tag Env Variables
         uses: ./.github/actions/setup-tag-env
       - name: Install yq
