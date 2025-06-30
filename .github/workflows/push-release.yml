@@ -304,8 +304,8 @@ jobs:
           fi
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
-          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-charts"
-          /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-charts
+          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
