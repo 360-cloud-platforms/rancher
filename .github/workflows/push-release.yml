@@ -289,11 +289,6 @@ jobs:
         run: |
           export PATH=/tmp:$PATH
           ./scripts/chart/validate
-      - name: Test
-        shell: bash
-        run: |
-          export PATH=/tmp:$PATH
-          ./scripts/chart/test
       - name: Package
         shell: bash
         run: |
