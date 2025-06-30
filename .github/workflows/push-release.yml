@@ -312,8 +312,8 @@ jobs:
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
           echo "CLEAN_VERSION: $CLEAN_VERSION"
-          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-charts/rancher:helm-chart-$CLEAN_VERSION"
-          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-charts/rancher:helm-chart-$CLEAN_VERSION
+          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:helm-chart-$CLEAN_VERSION"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:helm-chart-$CLEAN_VERSION
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
