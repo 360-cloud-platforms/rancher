@@ -248,7 +248,13 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq gawk
+          sudo apt-get install -y jq gawk google-cloud-sdk
+      - name: Authenticate with gcloud
+        shell: bash
+        run: |
+          echo "${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" > /tmp/key.json
+          gcloud auth activate-service-account --key-file=/tmp/key.json
+          gcloud auth configure-docker ${{ env.REGISTRY }}
       - name: Setup Tag Env Variables
         uses: ./.github/actions/setup-tag-env
       - name: Install yq
@@ -272,9 +278,6 @@ jobs:
           for i in {1..3}; do
             /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
           done
-      - name: Set Artifact Registry Username
-        run: |
-          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
       - name: Build
         shell: bash
         run: |
@@ -295,10 +298,6 @@ jobs:
         run: |
           export PATH=/tmp:$PATH
           ./scripts/chart/package
-      - name: Login to Artifact Registry for Helm
-        shell: bash
-        run: |
-          echo "${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" | /tmp/helm_v3 registry login ${{ env.REGISTRY }} -u _json_key --password-stdin
       - name: Push Helm chart to Artifact Registry
         shell: bash
         run: |
