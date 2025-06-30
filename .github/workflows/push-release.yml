@@ -8,13 +8,12 @@ on:
       - "v*"
 env:
   COMMIT: ${{ github.sha }}
-  REPOSITORY_OWNER: kalexiwells
-  IMAGE: kalexiwells/rancher-images
-  IMAGE_AGENT: kalexiwells/rancher-images
-  IMAGE_INSTALLER: kalexiwells/rancher-images
-  REGISTRY: "docker.io"
-  DOCKERIO_REGISTRY: "docker.io"
-  TAG: 2.10.6  # Hardcode for 2.10.6
+  REPOSITORY_OWNER: rock-atlas-424720-e5/rancher-images
+  IMAGE: rock-atlas-424720-e5/rancher-images/rancher-images
+  IMAGE_AGENT: rock-atlas-424720-e5/rancher-images/rancher-images
+  IMAGE_INSTALLER: rock-atlas-424720-e5/rancher-images/rancher-images
+  REGISTRY: "us-east1-docker.pkg.dev"
+  TAG: 2.10.6  # Hardcoded for 2.10.6
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -40,15 +39,15 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
@@ -126,15 +125,15 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - id: env
         name: Setup Dependencies Env Variables
@@ -209,15 +208,15 @@ jobs:
           merge-multiple: true
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Docker Registry Login
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Push server image
         run: |
@@ -276,10 +275,10 @@ jobs:
           for i in {1..3}; do
             /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
           done
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
       - name: Build
         shell: bash
         run: |
@@ -300,11 +299,11 @@ jobs:
         run: |
           export PATH=/tmp:$PATH
           ./scripts/chart/package
-      - name: Login to Docker Hub for Helm
+      - name: Login to Artifact Registry for Helm
         shell: bash
         run: |
-          echo "${{ env.DOCKER_PASSWORD }}" | /tmp/helm_v3 registry login ${{ env.REGISTRY }} -u ${{ env.DOCKER_USERNAME }} --password-stdin
-      - name: Push Helm chart to Docker Hub
+          echo "${{ env.GCP_PASSWORD }}" | /tmp/helm_v3 registry login ${{ env.REGISTRY }} -u ${{ env.GCP_USERNAME }} --password-stdin
+      - name: Push Helm chart to Artifact Registry
         shell: bash
         run: |
           CHART_TGZ=$(ls ./bin/chart/*/rancher-*.tgz 2>/dev/null)
@@ -317,12 +316,8 @@ jobs:
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
           echo "CLEAN_VERSION: $CLEAN_VERSION"
-          echo "Pushing to: oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:helm-chart-$CLEAN_VERSION"
-          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/${{ env.IMAGE }}:helm-chart-$CLEAN_VERSION
-        env:
-          REGISTRY: docker.io
-          DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
+          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-charts/rancher:helm-chart-$CLEAN_VERSION"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-charts/rancher:helm-chart-$CLEAN_VERSION
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
@@ -334,15 +329,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -363,15 +358,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -415,15 +410,15 @@ jobs:
           images: ${{ env.IMAGE_INSTALLER }}
           flavor: |
             latest=false
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Docker Registry Login
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -455,15 +450,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Credentials
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+          echo "GCP_PASSWORD=${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ env.GCP_PASSWORD }}
           registry: ${{ env.REGISTRY }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
