@@ -308,12 +308,10 @@ jobs:
             exit 1
           fi
           CHART_VERSION=$(basename "$CHART_TGZ" .tgz | sed 's/rancher-//')
-          CLEAN_VERSION=$(echo "$CHART_VERSION" | tr '.' '-')
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
-          echo "CLEAN_VERSION: $CLEAN_VERSION"
-          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:helm-chart-$CLEAN_VERSION"
-          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:helm-chart-$CLEAN_VERSION
+          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:$CHART_VERSION"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images/rancher:$CHART_VERSION
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
