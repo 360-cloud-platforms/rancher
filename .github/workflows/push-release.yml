@@ -1,11 +1,8 @@
 name: build-docker-images
+
 on:
-  push:
-    branches:
-      - "2.10.6-branch-custom-automation"
-      - "release/v*"
-    tags:
-      - "v*"
+  workflow_dispatch:
+  
 env:
   COMMIT: ${{ github.sha }}
   REPOSITORY_OWNER: rock-atlas-424720-e5/rancher-images
