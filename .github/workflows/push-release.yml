@@ -4,10 +4,10 @@ on:
   
 env:
   COMMIT: ${{ github.sha }}
-  REPOSITORY_OWNER: rock-atlas-424720-e5/rancher-images
-  IMAGE: rock-atlas-424720-e5/rancher-images/rancher-images
-  IMAGE_AGENT: rock-atlas-424720-e5/rancher-images/rancher-images
-  IMAGE_INSTALLER: rock-atlas-424720-e5/rancher-images/rancher-images
+  REPOSITORY_OWNER: ${{ vars.GCP_PROJECT_ID }}/rancher-images
+  IMAGE: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
+  IMAGE_AGENT: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
+  IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   REGISTRY: "us-east1-docker.pkg.dev"
   TAG: 2.10.6  # Hardcoded for 2.10.6
 jobs:
@@ -306,8 +306,8 @@ jobs:
           fi
           echo "CHART_TGZ: $CHART_TGZ"
           echo "CHART_VERSION: $CHART_VERSION"
-          echo "Pushing to: oci://${{ env.REGISTRY }}/rock-atlas-424720-e5/rancher-images"
-          /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images
+          echo "Pushing to: oci://${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/rancher-images"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/rancher-images
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
