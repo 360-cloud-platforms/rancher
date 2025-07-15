@@ -92,7 +92,7 @@ jobs:
           echo "CHART_VERSION: $CHART_VERSION"
           echo "Pushing to: oci://${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/rancher-images"
           /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/rancher-images
-  build-server:
+build-server:
     needs: [build-publish-chart]
     runs-on: ubuntu-latest
     strategy:
@@ -117,15 +117,14 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Username
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
           registry: ${{ env.REGISTRY }}
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
@@ -159,6 +158,7 @@ jobs:
             "COMMIT=${{ env.COMMIT }}"
             "RKE_VERSION=${{ steps.env.outputs.RKE_VERSION }}"
             "ARCH=${{ env.ARCH }}"
+            "REGISTRY=${{ env.REGISTRY }}"
             "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
             "CATTLE_CSP_ADAPTER_MIN_VERSION=${{ steps.env.outputs.CATTLE_CSP_ADAPTER_MIN_VERSION }}"
@@ -202,15 +202,14 @@ jobs:
         uses: ./.github/actions/install-yq
         with:
           arch: ${{ env.ARCH }}
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Username
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
           registry: ${{ env.REGISTRY }}
       - id: env
         name: Setup Dependencies Env Variables
@@ -238,6 +237,7 @@ jobs:
             "ARCH=${{ env.ARCH }}"
             "RANCHER_TAG=${{ env.TAG }}"
             "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
+            "REGISTRY=${{ env.REGISTRY }}"
             "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
             "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
@@ -283,15 +283,14 @@ jobs:
           merge-multiple: true
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
-      - name: Set Docker Credentials
+      - name: Set Artifact Registry Username
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
-      - name: Docker Registry Login
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
           registry: ${{ env.REGISTRY }}
       - name: Push server image
         run: |
