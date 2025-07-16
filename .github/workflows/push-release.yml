@@ -12,7 +12,6 @@ env:
   TAG: 2.10.6  # Hardcoded for 2.10.6
 jobs:
   build-installer:
-    needs: [merge-server-manifest]
     strategy:
       matrix:
         os: [linux]
