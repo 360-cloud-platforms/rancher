@@ -14,9 +14,12 @@ ENV CHART_VERSION=${VERSION}
 ENV HELM_VERSION=${HELM_VERSION}
 RUN wget https://get.helm.sh/helm-v3.16.1-linux-amd64.tar.gz -O - | \
     tar -xz --strip-components=1 -C /usr/bin && \
+    cp /usr/bin/helm /tmp/helm_v3 && \
     mv /usr/bin/helm /usr/bin/helm_v3 && \
     chown root:root /usr/bin/helm_v3 && \
+    chown root:root /tmp/helm_v3 && \
     chmod +x /usr/bin/helm_v3
+    chmod +x /tmp/helm_v3
 
 ENV YQ_VERSION=v4.44.2
 RUN wget -q https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64.tar.gz -O - | \
