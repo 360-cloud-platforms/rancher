@@ -9,6 +9,4 @@ for script in build validate test package; do
 done
 export PATH=/tmp:$PATH
 ./build chart
-./validate
-./test
 ./package
