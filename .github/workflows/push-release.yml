@@ -1,11 +1,7 @@
-name: build-docker-images
+name: build Rancher v2.10.4
 on:
-  push:
-    branches:
-      - "2.10.4-branch"
-      - "release/v*"
-    tags:
-      - "v*"
+  workflow_dispatch:
+  
 env:
   COMMIT: ${{ github.sha }}
   REPOSITORY_OWNER: ${{ vars.GCP_PROJECT_ID }}/rancher-images
