@@ -14,7 +14,7 @@ Replace environment variable in file can be used to replace an environment varia
 
 # Rancher Image Build Workflow
 
-This repository contains a GitHub Actions workflow (defined in `.github/workflows/2.10.4.yml`) for building, packaging, and pushing Docker images and a Helm chart for Rancher version 2.10.4. The workflow is tailored for a forked repository where images are pushed to a custom Google Cloud Artifact Registry (configured via environment variables like `REGISTRY`, `REPOSITORY_OWNER`, and secrets such as `GCP_ARTIFACT_REGISTRY_KEY`).
+This repository contains a GitHub Actions workflow (defined in `.github/workflows/push-release.yml`) for building, packaging, and pushing Docker images and a Helm chart for Rancher version 2.10.4. The workflow is tailored for a forked repository where images are pushed to a custom Google Cloud Artifact Registry (configured via environment variables like `REGISTRY`, `REPOSITORY_OWNER`, and secrets such as `GCP_ARTIFACT_REGISTRY_KEY`).
 
 The workflow automates the process of creating Rancher server, agent, and installer images, along with publishing the associated Helm chart. It supports AMD64 architecture (x64) on Linux and uses multi-stage builds to handle dependencies, image creation, and manifest merging for multi-architecture support.
 
