@@ -275,7 +275,7 @@ FROM --platform=$BUILDPLATFORM registry.suse.com/bci/golang:1.23 AS images
 
 ENV CATTLE_K3S_VERSION v1.31.1+k3s1
 
-RUN zypper -n install libbtrfs-devel libgpgme-devel
+RUN zypper -n install libbtrfs-devel libgpgme-devel zstd
 
 WORKDIR /src
 COPY hack/airgap/ /src/
