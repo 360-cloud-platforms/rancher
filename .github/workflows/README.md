@@ -27,8 +27,6 @@ This workflow is designed to:
 
 It triggers on pushes to the `2.10.4-branch` or `release/v*` branches, or when tags matching `v*` are created. The tag is hardcoded to `2.10.4` for this specific version.
 
-**Note:** This is based on a forked Rancher repository. You've mentioned editing `push-release.yml` to point to your Artifact Registry—ensure that secrets (e.g., `GCP_ARTIFACT_REGISTRY_KEY`) and variables (e.g., `GCP_PROJECT_ID`) are set in your repository settings for authentication.
-
 ## Environment Variables
 The workflow uses the following key environment variables:
 - `COMMIT`: Set to the GitHub SHA of the commit.
