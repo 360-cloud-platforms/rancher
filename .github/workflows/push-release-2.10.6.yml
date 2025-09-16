@@ -1,4 +1,4 @@
-name: Build push and release Docker images and Helm chart
+name: 2.10.6 Build push and release Docker images and Helm chart
 on:
   workflow_dispatch:
 
