@@ -10,13 +10,14 @@ env:
   IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   REGISTRY: "us-east1-docker.pkg.dev"
   TAG: 2.11.5  # Hardcoded for 2.11.5
+
 jobs:
   build-server:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [linux]
-        arch: [x64]
+        arch: [x64, arm64]
     permissions:
       contents: read
       id-token: write
@@ -96,12 +97,13 @@ jobs:
           if-no-files-found: error
           retention-days: 4
           overwrite: false
+
   build-agent:
     needs: [build-server]
     strategy:
       matrix:
         os: [linux]
-        arch: [x64]
+        arch: [x64, arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -174,12 +176,13 @@ jobs:
           if-no-files-found: error
           retention-days: 4
           overwrite: false
+
   push-images:
     needs: [build-agent]
     strategy:
       matrix:
         os: [linux]
-        arch: [x64]
+        arch: [x64, arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -230,6 +233,7 @@ jobs:
           fi
           docker tag "$image_agent_id" ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+
   build-publish-chart:
     needs: [push-images]
     runs-on: ubuntu-latest
@@ -308,6 +312,7 @@ jobs:
           echo "CHART_VERSION: $CHART_VERSION"
           echo "Pushing to: oci://${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/rancher-images"
           /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/rancher-images
+
   merge-server-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
@@ -332,10 +337,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Create manifest list and push
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-arm64
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server
+
   merge-agent-manifest:
     runs-on: ubuntu-latest
     needs: [push-images]
@@ -360,16 +368,19 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Create manifest list and push
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-arm64
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent
+
   build-installer:
     needs: [merge-server-manifest]
     strategy:
       matrix:
         os: [linux]
-        arch: [x64]
+        arch: [x64, arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -388,7 +399,7 @@ jobs:
       - name: Download chart
         run: |
           mkdir -p chart
-          helm pull oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images/rancher --version 2.11.5
+          helm pull oci://us-east1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher --version 2.11.5
           mv rancher-2.11.5.tgz chart
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
@@ -412,7 +423,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and export installer
+      - name: Build and push installer
         id: build
         uses: docker/build-push-action@v5
         with:
@@ -427,6 +438,7 @@ jobs:
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
           file: ./package/Dockerfile.installer
           labels: "${{ steps.meta.outputs.labels }}"
+
   merge-installer-manifest:
     runs-on: ubuntu-latest
     needs: [build-installer]
@@ -458,7 +470,9 @@ jobs:
             latest=false
       - name: Create manifest list and push
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-arm64
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer
