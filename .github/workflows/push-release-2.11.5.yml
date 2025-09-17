@@ -1,0 +1,464 @@
+name: 2.11.5 Build push and release Docker images and Helm chart
+on:
+  workflow_dispatch:
+
+env:
+  COMMIT: ${{ github.sha }}
+  REPOSITORY_OWNER: ${{ vars.GCP_PROJECT_ID }}/rancher-images
+  IMAGE: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
+  IMAGE_AGENT: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
+  IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
+  REGISTRY: "us-east1-docker.pkg.dev"
+  TAG: 2.11.5  # Hardcoded for 2.11.5
+jobs:
+  build-server:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [linux]
+        arch: [x64]
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Arch environment variable
+        shell: bash
+        run: |
+          if [[ "$ARCH" == "x64" ]]; then
+            echo "ARCH=amd64" >> $GITHUB_ENV
+          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install yq
+        uses: ./.github/actions/install-yq
+        with:
+          arch: ${{ env.ARCH }}
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - id: env
+        name: Setup Dependencies Env Variables
+        uses: ./.github/actions/setup-build-env
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: |
+            latest=false
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Create k3s images file
+        uses: ./.github/actions/k3s-images
+        with:
+          k3s_version: ${{ steps.env.outputs.CATTLE_K3S_VERSION }}
+      - name: Download data.json
+        run: curl -sLf https://releases.rancher.com/kontainer-driver-metadata/${{ steps.env.outputs.CATTLE_KDM_BRANCH }}/data.json > ./data.json
+      - name: Build and export server
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          build-args: |
+            "VERSION=${{ env.TAG }}"
+            "COMMIT=${{ env.COMMIT }}"
+            "RKE_VERSION=${{ steps.env.outputs.RKE_VERSION }}"
+            "ARCH=${{ env.ARCH }}"
+            "REGISTRY=${{ env.REGISTRY }}"
+            "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
+            "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
+            "CATTLE_CSP_ADAPTER_MIN_VERSION=${{ steps.env.outputs.CATTLE_CSP_ADAPTER_MIN_VERSION }}"
+            "CATTLE_FLEET_VERSION=${{ steps.env.outputs.CATTLE_FLEET_VERSION }}"
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
+          context: .
+          platforms: "${{ matrix.os }}/${{ env.ARCH }}"
+          file: ./package/Dockerfile
+          labels: "${{ steps.meta.outputs.labels }}"
+          outputs: type=docker,dest=/tmp/rancher-${{ matrix.os }}-${{ env.ARCH }}.tar
+          target: "server"
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: "rancher-${{ matrix.os }}-${{ env.ARCH }}"
+          path: /tmp/rancher-${{ matrix.os }}-${{ env.ARCH }}.tar
+          if-no-files-found: error
+          retention-days: 4
+          overwrite: false
+  build-agent:
+    needs: [build-server]
+    strategy:
+      matrix:
+        os: [linux]
+        arch: [x64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Arch environment variable
+        shell: bash
+        run: |
+          if [[ "$ARCH" == "x64" ]]; then
+            echo "ARCH=amd64" >> $GITHUB_ENV
+          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install yq
+        uses: ./.github/actions/install-yq
+        with:
+          arch: ${{ env.ARCH }}
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - id: env
+        name: Setup Dependencies Env Variables
+        uses: ./.github/actions/setup-build-env
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_AGENT }}
+          flavor: |
+            latest=false
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build agent
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          build-args: |
+            "VERSION=${{ env.TAG }}"
+            "ARCH=${{ env.ARCH }}"
+            "RANCHER_TAG=${{ env.TAG }}"
+            "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
+            "REGISTRY=${{ env.REGISTRY }}"
+            "CATTLE_RANCHER_WEBHOOK_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_WEBHOOK_VERSION }}"
+            "CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ steps.env.outputs.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}"
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+          context: .
+          platforms: "${{ matrix.os }}/${{ env.ARCH }}"
+          file: ./package/Dockerfile
+          labels: "${{ steps.meta.outputs.labels }}"
+          outputs: type=docker,dest=/tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar
+          target: "agent"
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: "rancher-agent-${{ matrix.os }}-${{ env.ARCH }}"
+          path: /tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar
+          if-no-files-found: error
+          retention-days: 4
+          overwrite: false
+  push-images:
+    needs: [build-agent]
+    strategy:
+      matrix:
+        os: [linux]
+        arch: [x64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Environment variables
+        shell: bash
+        run: |
+          if [[ "$ARCH" == "x64" ]]; then
+            echo "ARCH=amd64" >> $GITHUB_ENV
+          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download rancher image
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-${{ matrix.os }}-${{ env.ARCH }}"
+          path: /tmp
+          merge-multiple: true
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Push server image
+        run: |
+          image_id=$(docker load --input /tmp/rancher-${{ matrix.os }}-${{ env.ARCH }}.tar 2>&1 | grep "Loaded image" | awk '{print $NF}')
+          if [ -z "$image_id" ]; then
+            echo "Error: Failed to load image from tarball!"
+            exit 1
+          fi
+          docker tag "$image_id" ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
+      - name: Push agent image
+        run: |
+          image_agent_id=$(docker load --input /tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar 2>&1 | grep "Loaded image" | awk '{print $NF}')
+          if [ -z "$image_agent_id" ]; then
+            echo "Error: Failed to load image from tarball!"
+            exit 1
+          fi
+          docker tag "$image_agent_id" ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
+  build-publish-chart:
+    needs: [push-images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gawk
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - name: Setup Tag Env Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Install yq
+        uses: ./.github/actions/install-yq
+        with:
+          arch: ${{ env.ARCH }}
+      - id: env
+        name: Setup Dependencies Env Variables
+        uses: ./.github/actions/setup-build-env
+      - name: Install Helm dependencies
+        env:
+          HELM_URL: https://get.helm.sh/helm-${{ steps.env.outputs.HELM_VERSION }}-linux-amd64.tar.gz
+          HELM_UNITTEST_VERSION: ${{ steps.env.outputs.HELM_UNITTEST_VERSION }}
+        shell: bash
+        run: |
+          for i in {1..3}; do
+            curl -sLf ${{ env.HELM_URL }} | tar xvzf - --strip-components=1 -C /tmp/ && break || sleep 5
+          done
+          mv /tmp/helm /tmp/helm_v3
+          chmod +x /tmp/helm_v3
+          for i in {1..3}; do
+            /tmp/helm_v3 plugin install https://github.com/helm-unittest/helm-unittest.git --version ${{ env.HELM_UNITTEST_VERSION }} && break || sleep 5
+          done
+      - name: Build
+        shell: bash
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/build chart
+      - name: Validate
+        shell: bash
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/validate
+      - name: Package
+        shell: bash
+        run: |
+          export PATH=/tmp:$PATH
+          ./scripts/chart/package
+      - name: Helm registry login to Artifact Registry
+        shell: bash
+        run: |
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          /tmp/helm_v3 registry login -u oauth2accesstoken -p "$ACCESS_TOKEN" us-east1-docker.pkg.dev
+      - name: Push Helm chart to Artifact Registry
+        shell: bash
+        run: |
+          CHART_TGZ=$(ls ./bin/chart/*/rancher-*.tgz 2>/dev/null)
+          if [ -z "$CHART_TGZ" ]; then
+            echo "Error: No Helm chart .tgz file found in ./bin/chart/*/"
+            exit 1
+          fi
+          echo "CHART_TGZ: $CHART_TGZ"
+          echo "CHART_VERSION: $CHART_VERSION"
+          echo "Pushing to: oci://${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID }}/rancher-images"
+          /tmp/helm_v3 push "$CHART_TGZ" oci://us-east1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/rancher-images
+  merge-server-manifest:
+    runs-on: ubuntu-latest
+    needs: [push-images]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Create manifest list and push
+        run: |
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-amd64
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server
+  merge-agent-manifest:
+    runs-on: ubuntu-latest
+    needs: [push-images]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Create manifest list and push
+        run: |
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-amd64
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent
+  build-installer:
+    needs: [merge-server-manifest]
+    strategy:
+      matrix:
+        os: [linux]
+        arch: [x64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Environment variables
+        shell: bash
+        run: |
+          if [[ "$ARCH" == "x64" ]]; then
+            echo "ARCH=amd64" >> $GITHUB_ENV
+          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download chart
+        run: |
+          mkdir -p chart
+          helm pull oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images/rancher --version 2.11.5
+          mv rancher-2.11.5.tgz chart
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_INSTALLER }}
+          flavor: |
+            latest=false
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and export installer
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          build-args: |
+            "VERSION=${{ env.TAG }}"
+            "ARCH=${{ env.ARCH }}"
+            "BUILDARCH=${{ env.ARCH }}"
+            "REGISTRY=${{ env.REGISTRY }}"
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-${{ env.ARCH }}
+          context: .
+          platforms: "${{ matrix.os }}/${{ env.ARCH }}"
+          file: ./package/Dockerfile.installer
+          labels: "${{ steps.meta.outputs.labels }}"
+  merge-installer-manifest:
+    runs-on: ubuntu-latest
+    needs: [build-installer]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment Variables
+        uses: ./.github/actions/setup-tag-env
+      - name: Set Artifact Registry Username
+        run: |
+          echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.GCP_USERNAME }}
+          password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
+          registry: ${{ env.REGISTRY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_INSTALLER }}
+          flavor: |
+            latest=false
+      - name: Create manifest list and push
+        run: |
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-amd64
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer
