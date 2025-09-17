@@ -9,7 +9,7 @@ env:
   IMAGE_AGENT: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   REGISTRY: "us-east1-docker.pkg.dev"
-  TAG: 2.11.5  # Hardcoded for 2.10.6
+  TAG: 2.11.5  # Hardcoded for 2.11.5
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -388,8 +388,8 @@ jobs:
       - name: Download chart
         run: |
           mkdir -p chart
-          helm pull oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images/rancher --version 2.10.6
-          mv rancher-2.10.6.tgz chart
+          helm pull oci://us-east1-docker.pkg.dev/rock-atlas-424720-e5/rancher-images/rancher --version 2.11.5
+          mv rancher-2.11.5.tgz chart
       - name: Setup Environment Variables
         uses: ./.github/actions/setup-tag-env
       - name: Docker meta
