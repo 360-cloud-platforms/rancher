@@ -2,7 +2,7 @@ name: Push to release branches
 on:
   push:
     branches:
-      - "main"
+      - "v2.11.5-build-image"
       - "release/v*"
 env:
   COMMIT: ${{ github.sha }}
