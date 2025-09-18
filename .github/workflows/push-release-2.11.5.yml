@@ -237,6 +237,10 @@ jobs:
         run: |
           export PATH=/tmp:$PATH
           ./scripts/chart/build chart
+      - name: Fix Chart.yaml appVersion
+        shell: bash
+        run: |
+          sed -i 's/appVersion: 2.11.5/appVersion: "2.11.5"/' build/chart/rancher/Chart.yaml
       - name: Validate
         shell: bash
         run: |
