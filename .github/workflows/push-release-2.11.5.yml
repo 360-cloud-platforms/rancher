@@ -10,6 +10,14 @@ env:
   IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   REGISTRY: "us-east1-docker.pkg.dev"
   TAG: 2.11.5  # Hardcoded for 2.11.5
+  VERSION: 2.11.5  # Hardcoded for Docker builds
+  RKE_VERSION: v1.4.4  # Adjust based on build.yaml or data.json
+  CATTLE_RANCHER_WEBHOOK_VERSION: v0.2.5  # Adjust based on build.yaml
+  CATTLE_RANCHER_PROVISIONING_CAPI_VERSION: v1.0.0  # Adjust based on build.yaml
+  CATTLE_CSP_ADAPTER_MIN_VERSION: v1.0.0  # Adjust based on build.yaml
+  CATTLE_FLEET_VERSION: v0.6.0  # Adjust based on build.yaml
+  CATTLE_DEFAULT_SHELL_VERSION: rancher/shell:v0.1.0  # Adjust based on build.yaml
+  CATTLE_REMOTEDIALER_PROXY_VERSION: v0.3.0  # Adjust based on build.yaml
 
 jobs:
   build-server:
@@ -44,6 +52,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Docker meta
         id: meta
@@ -64,10 +73,17 @@ jobs:
         with:
           push: false
           build-args: |
-            "VERSION=${{ env.TAG }}"
-            "COMMIT=${{ env.COMMIT }}"
-            "ARCH=${{ env.ARCH }}"
-            "REGISTRY=${{ env.REGISTRY }}"
+            VERSION=${{ env.VERSION }}
+            COMMIT=${{ env.COMMIT }}
+            RKE_VERSION=${{ env.RKE_VERSION }}
+            ARCH=${{ env.ARCH }}
+            REGISTRY=${{ env.REGISTRY }}
+            CATTLE_RANCHER_WEBHOOK_VERSION=${{ env.CATTLE_RANCHER_WEBHOOK_VERSION }}
+            CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ env.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}
+            CATTLE_CSP_ADAPTER_MIN_VERSION=${{ env.CATTLE_CSP_ADAPTER_MIN_VERSION }}
+            CATTLE_FLEET_VERSION=${{ env.CATTLE_FLEET_VERSION }}
+            CATTLE_DEFAULT_SHELL_VERSION=${{ env.CATTLE_DEFAULT_SHELL_VERSION }}
+            CATTLE_REMOTEDIALER_PROXY_VERSION=${{ env.CATTLE_REMOTEDIALER_PROXY_VERSION }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
@@ -75,6 +91,9 @@ jobs:
           labels: "${{ steps.meta.outputs.labels }}"
           outputs: type=docker,dest=/tmp/rancher-${{ matrix.os }}-${{ env.ARCH }}.tar
           target: "server"
+      - name: Debug built image
+        run: |
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
       - name: Upload image
         uses: actions/upload-artifact@v4
         with:
@@ -90,7 +109,6 @@ jobs:
       matrix:
         os: [linux]
         arch: [x64, arm64]
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
@@ -117,6 +135,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Docker meta
         id: meta
@@ -135,11 +154,15 @@ jobs:
         with:
           push: false
           build-args: |
-            "VERSION=${{ env.TAG }}"
-            "ARCH=${{ env.ARCH }}"
-            "RANCHER_TAG=${{ env.TAG }}"
-            "RANCHER_REPO=${{ env.REPOSITORY_OWNER }}"
-            "REGISTRY=${{ env.REGISTRY }}"
+            VERSION=${{ env.VERSION }}
+            ARCH=${{ env.ARCH }}
+            RANCHER_TAG=${{ env.TAG }}
+            RANCHER_REPO=${{ env.REPOSITORY_OWNER }}
+            REGISTRY=${{ env.REGISTRY }}
+            CATTLE_RANCHER_WEBHOOK_VERSION=${{ env.CATTLE_RANCHER_WEBHOOK_VERSION }}
+            CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ env.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}
+            CATTLE_DEFAULT_SHELL_VERSION=${{ env.CATTLE_DEFAULT_SHELL_VERSION }}
+            CATTLE_REMOTEDIALER_PROXY_VERSION=${{ env.CATTLE_REMOTEDIALER_PROXY_VERSION }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
@@ -147,6 +170,9 @@ jobs:
           labels: "${{ steps.meta.outputs.labels }}"
           outputs: type=docker,dest=/tmp/rancher-agent-${{ matrix.os }}-${{ env.ARCH }}.tar
           target: "agent"
+      - name: Debug built image
+        run: |
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
       - name: Upload image
         uses: actions/upload-artifact@v4
         with:
@@ -180,6 +206,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Download rancher image
         uses: actions/download-artifact@v4
@@ -203,6 +230,8 @@ jobs:
             echo "Error: Failed to load image from tarball!"
             exit 1
           fi
+          echo "Loaded server image ID: $image_id"
+          # Explicitly retag to override any incorrect tags
           docker tag "$image_id" ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
       - name: Push agent image
@@ -212,6 +241,8 @@ jobs:
             echo "Error: Failed to load image from tarball!"
             exit 1
           fi
+          echo "Loaded agent image ID: $image_agent_id"
+          # Explicitly retag to override any incorrect tags
           docker tag "$image_agent_id" ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
 
@@ -223,6 +254,8 @@ jobs:
       id-token: write
     env:
       ARCH: amd64
+      CHART_VERSION: 2.11.5
+      APP_VERSION: 2.11.5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -248,11 +281,17 @@ jobs:
         shell: bash
         run: |
           export PATH=/tmp:$PATH
+          # Skip sourcing ./version to avoid dynamic versioning
+          sed -i 's|\. ./version||' scripts/chart/build
           ./scripts/chart/build chart
       - name: Fix Chart.yaml appVersion
         shell: bash
         run: |
-          sed -i 's/appVersion: 2.11.5/appVersion: "2.11.5"/' build/chart/rancher/Chart.yaml
+          sed -i 's/appVersion: .*/appVersion: "2.11.5"/' build/chart/rancher/Chart.yaml
+      - name: Fix Chart.yaml version
+        shell: bash
+        run: |
+          sed -i 's/version: .*/version: "2.11.5"/' build/chart/rancher/Chart.yaml
       - name: Validate
         shell: bash
         run: |
@@ -292,6 +331,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Set Artifact Registry Username
         run: |
@@ -325,6 +365,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Set Artifact Registry Username
         run: |
@@ -370,6 +411,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Download chart
         run: |
@@ -402,15 +444,18 @@ jobs:
         with:
           push: true
           build-args: |
-            "VERSION=${{ env.TAG }}"
-            "ARCH=${{ env.ARCH }}"
-            "BUILDARCH=${{ env.ARCH }}"
-            "REGISTRY=${{ env.REGISTRY }}"
+            VERSION=${{ env.VERSION }}
+            ARCH=${{ env.ARCH }}
+            BUILDARCH=${{ env.ARCH }}
+            REGISTRY=${{ env.REGISTRY }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
           file: ./package/Dockerfile.installer
           labels: "${{ steps.meta.outputs.labels }}"
+      - name: Debug built image
+        run: |
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_INSTALLER }}:${{ env.TAG }}-installer-${{ env.ARCH }}
 
   merge-installer-manifest:
     runs-on: ubuntu-latest
@@ -424,6 +469,7 @@ jobs:
       - name: Debug environment variables
         run: |
           echo "TAG=${{ env.TAG }}"
+          echo "VERSION=${{ env.VERSION }}"
           env | sort
       - name: Set Artifact Registry Username
         run: |
