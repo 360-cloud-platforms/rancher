@@ -9,15 +9,8 @@ env:
   IMAGE_AGENT: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   IMAGE_INSTALLER: ${{ vars.GCP_PROJECT_ID }}/rancher-images/rancher-images
   REGISTRY: "us-east1-docker.pkg.dev"
-  TAG: 2.11.5  # Hardcoded for 2.11.5
+  TAG: 2.11.5  # Hardcoded for image tags
   VERSION: 2.11.5  # Hardcoded for Docker builds
-  RKE_VERSION: v1.4.4  # Adjust based on build.yaml or data.json
-  CATTLE_RANCHER_WEBHOOK_VERSION: v0.2.5  # Adjust based on build.yaml
-  CATTLE_RANCHER_PROVISIONING_CAPI_VERSION: v1.0.0  # Adjust based on build.yaml
-  CATTLE_CSP_ADAPTER_MIN_VERSION: v1.0.0  # Adjust based on build.yaml
-  CATTLE_FLEET_VERSION: v0.6.0  # Adjust based on build.yaml
-  CATTLE_DEFAULT_SHELL_VERSION: rancher/shell:v0.1.0  # Adjust based on build.yaml
-  CATTLE_REMOTEDIALER_PROXY_VERSION: v0.3.0  # Adjust based on build.yaml
 
 jobs:
   build-server:
@@ -75,15 +68,8 @@ jobs:
           build-args: |
             VERSION=${{ env.VERSION }}
             COMMIT=${{ env.COMMIT }}
-            RKE_VERSION=${{ env.RKE_VERSION }}
             ARCH=${{ env.ARCH }}
             REGISTRY=${{ env.REGISTRY }}
-            CATTLE_RANCHER_WEBHOOK_VERSION=${{ env.CATTLE_RANCHER_WEBHOOK_VERSION }}
-            CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ env.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}
-            CATTLE_CSP_ADAPTER_MIN_VERSION=${{ env.CATTLE_CSP_ADAPTER_MIN_VERSION }}
-            CATTLE_FLEET_VERSION=${{ env.CATTLE_FLEET_VERSION }}
-            CATTLE_DEFAULT_SHELL_VERSION=${{ env.CATTLE_DEFAULT_SHELL_VERSION }}
-            CATTLE_REMOTEDIALER_PROXY_VERSION=${{ env.CATTLE_REMOTEDIALER_PROXY_VERSION }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
@@ -159,10 +145,6 @@ jobs:
             RANCHER_TAG=${{ env.TAG }}
             RANCHER_REPO=${{ env.REPOSITORY_OWNER }}
             REGISTRY=${{ env.REGISTRY }}
-            CATTLE_RANCHER_WEBHOOK_VERSION=${{ env.CATTLE_RANCHER_WEBHOOK_VERSION }}
-            CATTLE_RANCHER_PROVISIONING_CAPI_VERSION=${{ env.CATTLE_RANCHER_PROVISIONING_CAPI_VERSION }}
-            CATTLE_DEFAULT_SHELL_VERSION=${{ env.CATTLE_DEFAULT_SHELL_VERSION }}
-            CATTLE_REMOTEDIALER_PROXY_VERSION=${{ env.CATTLE_REMOTEDIALER_PROXY_VERSION }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           context: .
           platforms: "${{ matrix.os }}/${{ env.ARCH }}"
@@ -231,7 +213,6 @@ jobs:
             exit 1
           fi
           echo "Loaded server image ID: $image_id"
-          # Explicitly retag to override any incorrect tags
           docker tag "$image_id" ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.TAG }}-server-${{ env.ARCH }}
       - name: Push agent image
@@ -242,7 +223,6 @@ jobs:
             exit 1
           fi
           echo "Loaded agent image ID: $image_agent_id"
-          # Explicitly retag to override any incorrect tags
           docker tag "$image_agent_id" ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_AGENT }}:${{ env.TAG }}-agent-${{ env.ARCH }}
 
