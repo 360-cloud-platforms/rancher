@@ -41,6 +41,10 @@ jobs:
           username: ${{ env.GCP_USERNAME }}
           password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
           registry: ${{ env.REGISTRY }}
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -110,6 +114,10 @@ jobs:
           username: ${{ env.GCP_USERNAME }}
           password: ${{ secrets.GCP_ARTIFACT_REGISTRY_KEY }}
           registry: ${{ env.REGISTRY }}
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -169,6 +177,10 @@ jobs:
           fi
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Download rancher image
         uses: actions/download-artifact@v4
         with:
@@ -277,6 +289,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Set Artifact Registry Username
         run: |
           echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
@@ -306,6 +322,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Set Artifact Registry Username
         run: |
           echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
@@ -347,6 +367,10 @@ jobs:
           fi
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Download chart
         run: |
           mkdir -p chart
@@ -397,6 +421,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Debug environment variables
+        run: |
+          echo "TAG=${{ env.TAG }}"
+          env | sort
       - name: Set Artifact Registry Username
         run: |
           echo "GCP_USERNAME=_json_key" >> $GITHUB_ENV
