@@ -237,10 +237,18 @@ jobs:
         run: |
           export PATH=/tmp:$PATH
           ./scripts/chart/build chart
+      - name: Fix Chart.yaml version
+        shell: bash
+        run: |
+          sed -i 's/version: .*/version: "${{ env.TAG }}"/' build/chart/rancher/Chart.yaml
       - name: Fix Chart.yaml appVersion
         shell: bash
         run: |
-          sed -i 's/appVersion: 2.11.5/appVersion: "2.11.5"/' build/chart/rancher/Chart.yaml
+          sed -i 's/appVersion: .*/appVersion: "${{ env.TAG }}"/' build/chart/rancher/Chart.yaml
+      - name: Debug Chart.yaml
+        shell: bash
+        run: |
+          cat build/chart/rancher/Chart.yaml
       - name: Validate
         shell: bash
         run: |
@@ -262,6 +270,11 @@ jobs:
           CHART_TGZ=$(ls ./bin/chart/*/rancher-*.tgz 2>/dev/null)
           if [ -z "$CHART_TGZ" ]; then
             echo "Error: No Helm chart .tgz file found in ./bin/chart/*/"
+            exit 1
+          fi
+          EXPECTED_CHART="rancher-${{ env.TAG }}.tgz"
+          if [[ ! $(basename "$CHART_TGZ") == "$EXPECTED_CHART" ]]; then
+            echo "Error: Chart version is incorrect. Expected $EXPECTED_CHART, got $(basename "$CHART_TGZ")"
             exit 1
           fi
           echo "CHART_TGZ: $CHART_TGZ"
